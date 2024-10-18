@@ -23,8 +23,8 @@ def identify_fraud(total_amount, transaction_count, average_spending):
     return False  # Default to not fraudulent
 
 def produce_fraudulent_transaction(producer,credit_card_number,customer_email,amount, timestamp,average_spend,transactions_count):
-    record = {"prompt_message": f"Generate a very short message saying the transaction is likely to be fraud with the details, credit card number {credit_card_number} customer {customer_email} total spend {amount}  average spend {average_spend} total number of transactions {transactions_count} time period {timestamp}"}
-    producer.produce('fraudulent_transactions5', value=json.dumps(record))
+    record = {"details": f"Generate an alert message without any extra information or Note to the user informing the transaction with the given details is likely to be fraud. The message should be very specific and and should not exceed 3 to 4 sentences and should not produce any code in any language. Following is the transaction details credit card number {credit_card_number} customer {customer_email} total spend {amount}  average spend {average_spend} total number of transactions {transactions_count} time period {timestamp}"}
+    producer.produce('fraudulent_transactions', value=json.dumps(record))
     producer.flush()
 
 def run_fraud_detection(producer,consumer):
@@ -37,28 +37,28 @@ def run_fraud_detection(producer,consumer):
             if msg.error():
                 print("Error: {}".format(msg.error()))
                 continue
-
-            key = json.loads(msg.key()[5:].decode('utf-8'))
-            feature = json.loads(msg.value()[5:].decode('utf-8'))
-            
-            total_amount = feature['total_amount']
-            transaction_count = feature['transaction_count']
-            average_spending = feature['average_spending_amount']
-            time_range = datetime.fromtimestamp(feature["window_start"]/1000.0).isoformat() + " to " + datetime.fromtimestamp(feature["window_end"]/1000.0).isoformat()
-            
-            is_fraudulent = identify_fraud(total_amount, transaction_count, average_spending)
-            
-            if is_fraudulent:
-                produce_fraudulent_transaction(
-                    producer=producer,
-                    credit_card_number=key["credit_card_number"],
-                    customer_email=feature['customer_email'],
-                    amount=total_amount,
-                    average_spend=average_spending,
-                    transactions_count=transaction_count,
-                    timestamp=time_range
-                )
-                print(f"Fraud detected for transaction for credit card: {key['credit_card_number']} {feature}")
+            if msg.value() is not None:
+                key = json.loads(msg.key()[5:].decode('utf-8'))
+                feature = json.loads(msg.value()[5:].decode('utf-8'))
+                
+                total_amount = feature['total_amount']
+                transaction_count = feature['transaction_count']
+                average_spending = feature['average_spending_amount']
+                time_range = datetime.fromtimestamp(feature["window_start"]/1000.0).isoformat() + " to " + datetime.fromtimestamp(feature["window_end"]/1000.0).isoformat()
+                
+                is_fraudulent = identify_fraud(total_amount, transaction_count, average_spending)
+                
+                if is_fraudulent:
+                    produce_fraudulent_transaction(
+                        producer=producer,
+                        credit_card_number=key["credit_card_number"],
+                        customer_email=feature['customer_email'],
+                        amount=total_amount,
+                        average_spend=average_spending,
+                        transactions_count=transaction_count,
+                        timestamp=time_range
+                    )
+                    print(f"Fraud detected for transaction for credit card: {key['credit_card_number']} {feature}")
     except KeyboardInterrupt:
         pass
     finally:
@@ -71,7 +71,7 @@ if __name__ == "__main__":
     
     # Setup consumers
     consumer = Consumer(config)
-    consumer.subscribe(['feature_set5'])
+    consumer.subscribe(['feature_set'])
     
     # Initialize the Kafka producer for fraudulent transactions
     producer = Producer(config)

@@ -53,7 +53,7 @@ def generate_dummy_transactions(producer,num_transactions, num_fraudulent):
         random_seconds = random.randint(10,50)
         transaction_id = i+100001
         credit_card_number = random.choice(credit_card_numbers)  # Pick a random credit card number
-        amount = random.randint(100, 2000)  # Random amount between $10 and $500
+        amount = random.randint(500, 2000)  # Random amount between $500 and $2000
         location = random.choice(locations)  # Pick a random location
         timestamp = ' '.join((base_timestamp - timedelta(hours=random_hours,minutes=random_minutes,seconds=random_seconds)).isoformat().split('T'))[:-3]
         produce_transaction(producer,transaction_id, credit_card_number, amount, location,timestamp)
@@ -67,10 +67,10 @@ def generate_dummy_transactions(producer,num_transactions, num_fraudulent):
         credit_card_number = credit_card_number
         
         # High amount to simulate fraud
-        amount = random.randint(5000, 10000)  
+        amount = random.randint(5000, 10000)
         
         # Pick a random location
-        location = random.choice(locations)  
+        location = random.choice(locations)
 
         # Generate a timestamp
         timestamp = ' '.join((base_timestamp + timedelta(minutes=random.uniform(0, 10))).isoformat().split('T'))[:-3]
@@ -88,5 +88,5 @@ if __name__ == "__main__":
    # Generate 100 dummy transactions with 5-10 fraudulent transactions
     num_transactions = 100
     num_fraudulent = random.randint(5, 10)  # Randomly select number of fraudulent transactions
-    generate_dummy_transactions(producer,num_transactions, num_fraudulent)
+    generate_dummy_transactions(producer, num_transactions, num_fraudulent)
     logging.info("Generated 100 transactions complete..!")
