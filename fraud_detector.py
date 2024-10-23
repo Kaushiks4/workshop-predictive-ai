@@ -38,8 +38,8 @@ def run_fraud_detection(producer,consumer):
                 print("Error: {}".format(msg.error()))
                 continue
             if msg.value() is not None:
-                key = json.loads(msg.key()[5:].decode('utf-8'))
-                feature = json.loads(msg.value()[5:].decode('utf-8'))
+                key = json.loads(msg.key().decode('utf-8'))
+                feature = json.loads(msg.value().decode('utf-8'))
                 
                 total_amount = feature['total_amount']
                 transaction_count = feature['transaction_count']

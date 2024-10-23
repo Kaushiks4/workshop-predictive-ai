@@ -13,8 +13,8 @@
 4. [Create Topics and walk through Confluent Cloud Dashboard](#step-4)
 5. [Create Datagen Connectors for Customers and Credit Cards](#step-5)
 6. [Create a Producer for transactions topic](#step-6)
-7. [Clone the repository and configure the clients](#step-7)
-8. [Add data contract to transactions topic](#step-8)
+7. [Add data contract to transactions topic](#step-7)
+8. [Clone the repository and configure the clients](#step-8)
 9. [Perform complex joins using Flink to combine the records into one topic](#step-9)
 10. [Consume feature set topic and predict fraud transactions](#step-10)
 11. [Connect Flink with Bedrock Model](#step-11)
@@ -569,8 +569,6 @@ The next step is to create a consumer for feature set topic and predict the frau
 ```
 3. Update ```client.properties``` file with an additional configuration at the end of the file like following.
 ```bash
-auto.offset.reset=earliest
-enable.auto.commit=false
 group.id=Workshop5<6 random chars>
 ```
 
