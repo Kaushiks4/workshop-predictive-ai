@@ -368,17 +368,12 @@ The next step is to produce sample data using a client. You will configure a pyt
     <img src="images/producer-4.png" width=75% height=75%>
 </div>
 
-## <a name="step-7"></a>Clone the repository and configure the clients.
+## <a name="step-7"></a>Configure the clients.
 The next step is to run the producer to produce 100 transactions to the **transactions** topic.
 
 1. Open VS Code or any editor of your choice.
-2. Clone the github repo to your local system inside the folder of your choice.
-```
-git clone https://github.com/Kaushiks4/workshop-predictive-ai.git
-cd workshop-predictive-ai
-```
-
-3. Create a virtual environment for this project and activate it by running the following command
+2. Go to the root directory of the application folder.
+3. Create a virtual environment for this project and activate it by running the following command.
 ```
 python3 -m venv _venv
 source _venv/bin/activate
