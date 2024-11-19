@@ -2,9 +2,10 @@ import json
 from datetime import datetime
 from confluent_kafka import Consumer, Producer
 from confluent_kafka.serialization import SerializationContext, MessageField
-from confluent_kafka.schema_registry.json_schema import JSONDeserializer
+from confluent_kafka.schema_registry import SchemaRegistryClient
+from confluent_kafka.schema_registry.json_schema import JSONDeserializer, JSONSerializer
 
-# Initialize the Kafka consumer
+# Initialize the Kafka config
 def read_config():
   # reads the client configuration from client.properties
   # and returns it as a key-value map
@@ -16,6 +17,15 @@ def read_config():
         parameter, value = line.strip().split('=', 1)
         config[parameter] = value.strip()
   return config
+
+def read_schema():
+    schema_config = {}
+    with open("schema.properties") as sp:
+     for line in sp:
+        if len(line) != 0 and line[0] != "#":
+           parameter, value = line.strip().split('=', 1)
+           schema_config[parameter] = value.strip()
+    return schema_config
 
 class Feature_Set_Key:
     def __init__(self, credit_card_number):
@@ -29,6 +39,38 @@ class Feature_Set_Value:
         self.window_end = window_end
         self.window_start = window_start
         self.credit_card_number = credit_card_number
+
+class Fraud_Transaction:
+    def __init__(self, details):
+        self.details = details
+
+    def to_dict(self):
+        return {
+            "details": self.details
+        }
+
+FRAUD_TRANSACTION_SCHEMA = """
+{
+    "title": "FraudulentTransactionsRecord",
+    "type": "object",
+    "properties": {
+      "details": {
+        "connect.index": 0,
+        "type": "string"
+      }
+    }
+}
+"""
+
+# Configure the schema properties file
+schema_config = read_schema()
+
+# Set up Schema Registry client and JSON Serializer
+schema_registry_client = SchemaRegistryClient({
+  'url': schema_config["schema.registry.url"],
+  'basic.auth.user.info':schema_config["schema.registry.username"]+":"+schema_config["schema.registry.password"]
+})
+json_serializer = JSONSerializer(FRAUD_TRANSACTION_SCHEMA, schema_registry_client)
 
 def dict_to_feature_set_key(obj, ctx):
     """
@@ -66,11 +108,6 @@ def dict_to_feature_set_value(obj, ctx):
                 window_start=obj['window_start']
             )
 
-
-class Fraud_Transaction:
-    def __init__(self, details):
-        self.details = details
-
 def identify_fraud(total_amount, transaction_count, average_spending):
     # Rule-based fraud detection logic
     # Example rules:
@@ -79,9 +116,16 @@ def identify_fraud(total_amount, transaction_count, average_spending):
     return False  # Default to not fraudulent
 
 def produce_fraudulent_transaction(producer,credit_card_number,customer_email,amount, timestamp,average_spend,transactions_count):
-    record = {"details": f"Generate a short alert message to the user informing the transaction with the given details is likely to be fraud. credit card number {credit_card_number} customer {customer_email} total spend {amount}  average spend {average_spend} total number of transactions {transactions_count} time period {timestamp}"}
-    producer.produce('fraudulent_transactions', value=json.dumps(record))
-    producer.flush()
+    try:
+      record = Fraud_Transaction(
+          details= f"Generate a short alert message to the user informing the transaction with the given details is likely to be fraud. credit card number {credit_card_number} customer {customer_email} total spend {amount}  average spend {average_spend} total number of transactions {transactions_count} time period {timestamp}"
+        )
+      serialized_record = json_serializer(record.to_dict(), SerializationContext("fraudulent_transactions", MessageField.VALUE))
+
+      producer.produce('fraudulent_transactions', value=serialized_record)
+      producer.flush()
+    except Exception as e:
+        print(f"Failed to send record to topic: {e}")
 
 def run_fraud_detection(producer,consumer, json_deserializer_value, json_deserializer_key):
     try:
@@ -116,6 +160,7 @@ def run_fraud_detection(producer,consumer, json_deserializer_value, json_deseria
                         timestamp=time_range
                     )
                     print(f"Fraud detected for transaction for credit card: {key.credit_card_number} {feature}")
+                consumer.commit()
     except KeyboardInterrupt:
         pass
     finally:
@@ -240,9 +285,3 @@ if __name__ == "__main__":
                                          from_dict=dict_to_feature_set_key)
     
     run_fraud_detection(producer,consumer,json_deserializer_value, json_deserializer_key)
-
-
-
-
-
-

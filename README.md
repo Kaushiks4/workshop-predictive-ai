@@ -133,7 +133,7 @@ An environment contains clusters and its deployed components such as Apache Flin
     <img src="images/create-flink-pool-1.png" width=50% height=50%>
 </div>
 
-2. Select **Region** and then **Continue**.
+2. Select **Region** and then **Continue**. (You have to use the region where the cluster was created in the previous step)
 <div align="center" padding=25px>
     <img src="images/create-flink-pool-2.png" width=50% height=50%>
 </div>
@@ -176,15 +176,13 @@ An environment contains clusters and its deployed components such as Apache Flin
 
 2. Click on **Cluster Settings**. This is where you can find your *Cluster ID, Bootstrap Server, Cloud Details, Cluster Type,* and *Capacity Limits*.
 3. On the same navigation menu, select **Topics** and click **Create Topic**. 
-4. Enter **customers** as the topic name, **1** as the number of partitions, skip the data contract and then click **Create with defaults**.'
+4. Enter **customers** as the topic name, **3** as the number of partitions, skip the data contract and then click **Create with defaults**.'
 
 <div align="center" padding=25px>
     <img src="images/create-topic.png" width=50% height=50%>
 </div>
 
-5. Repeat the previous step and create a second topic name **credit_cards** and **1** as the number of partitions and skip the data contract.
-   
-6. Repeat the previous step and create a second topic name **transactions** and **1** as the number of partitions and skip the data contract.
+5. Repeat the previous step and create a second topic name **credit_cards** and **3** as the number of partitions and skip the data contract.
 
 > **Note:** Topics have many configurable parameters. A complete list of those configurations for Confluent Cloud can be found [here](https://docs.confluent.io/cloud/current/using/broker-config.html). If you are interested in viewing the default configurations, you can view them in the Topic Summary on the right side. 
 
@@ -345,20 +343,23 @@ The next step is to produce sample data using the Datagen Source connector. You 
 * You should now be able to see the messages within the UI. You can view the specific messages by clicking the icon.
 ***
 
-## <a name="step-7"></a>Clone the repository and configure the clients.
+## <a name="step-7"></a>Configure the clients.
 The next step is to run the producer to produce 100 transactions to the **transactions** topic.
 
-1. Open VS Code or any editor of your choice and open the github repository folder.
-3. Create a virtual environment for this project and activate it by running the following command
+1. Open VS Code or any editor of your choice and open the github repository folder and run the following command
+```bash
+cd series-getting-started-with-cc/workshop-predictive-ai
 ```
+3. Create a virtual environment for this project and activate it by running the following command
+```bash
 python3 -m venv _venv
 source _venv/bin/activate
 ```
 4. Install the dependencies by running the following commmand.
-```
+```bash
 pip3 install -r requirements.txt
 ```
-5. Create a client.properties and schema.properties files in the current folder. Let these be empty now we'll paste the configurations in the next step.
+5. Create a ```client.properties``` and ```schema.properties``` files in the current folder. Let these be empty now we'll paste the configurations in the next step.
 
 ## <a name="step-8"></a>Create a Python Client for transactions topic
 The next step is to produce sample data using a client. You will configure a python client for **transactions** topic.
@@ -409,14 +410,20 @@ schema.registry.url=https://psrc-em25q.us-east-2.aws.confluent.cloud
 schema.registry.username=xxxxxxxxxx
 schema.registry.password=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 ```
-11. Run the ```transaction_producer.py``` file by running the following command.
+12. Run the admin client to create required topics.
+```bash
+python3 admin_client.py
 ```
-python3 transactions_producer.py
+You should be able to view the output something like this..
+```bash
+Topic transactions created
+Topic fraudulent_transactions created
 ```
-If the program is complete successfully you can see the following message in your terminal at the end.
+11. Run the ```producer.py``` file by running the following command.
+```bash
+python3 producer.py
 ```
-Transaction record b'1d77339c-c32d-432e-a181-3ce20a142282' successfully produced to transactions [0] at offset 99
-```
+You can see records being published to transactions topic.
 > **Note:** If the producer fails, there are a few different ways to troubleshoot the error:
 > * Click on the *Cluster Overiview*, go to *Cluster Settings*,. Double check there are no extra spaces at the beginning or end of the key and secret that you may have accidentally copied and pasted in ```client.properties``` file also verify the ```bootstrap.servers``` value by comparing it with the *Bootstrap Server* value in the Endpoints section in UI. Also verify the ```schema.properties```
 
@@ -520,38 +527,31 @@ c. [Cumulate Windows](https://docs.confluent.io/cloud/current/flink/reference/qu
 ## <a name="step-11"></a>Consume feature set topic and predict fraud transactions
 The next step is to create a consumer for feature set topic and predict the fraudulent transaction.
 
-1. First, you will have to create a **fraudulent_transactions** topic by following the steps detailed in (#step-4). Use 1 partitions.
-2. Once the topic gets created, click on *Data Contract* and **Add a data contract**.
-3. Choose *JSON Schema* as type and paste the following conten and click on **Create**.
-```json
-{
-    "title": "FraudulentTransactionsRecord",
-    "type": "object",
-    "properties": {
-      "details": {
-        "connect.index": 0,
-        "type": "string"
-      }
-    }
-}
-```
-3. Update ```client.properties``` file with an additional configuration at the end of the file like following.
+1. Update ```client.properties``` file with an additional configuration at the end of the file like following.
 ```bash
-auto.offset.reset=earliest
+auto.offset.reset=latest
 enable.auto.commit=false
-group.id=Workshop5<6 random chars>
+group.id=FraudDetectorApplication
 ```
 
-4. Run the ```fraud_detector.py``` to determine the fraudulent transactions from the feature set and produce the transactions to the topic created above.
+2. Run the ```fraud_detector.py``` to determine the fraudulent transactions from the feature set and produce the transactions to the topic created above.
 ```python
 python3 fraud_detector.py
 ```
 
-5. Now you can see few messages in the *fraudulent_transactions* topic. When you see ```Polling for messages...``` continously you can stop the consumer by clicking ```Ctrl+c```
+3. Now you can see few messages in the *fraudulent_transactions* topic. When you see ```Polling for messages...``` continously you can stop the consumer by clicking ```Ctrl+c```
 
 > **Note:** This demonstration simulates a sample condition as a machine learning model to showcase the capabilities of real-time streaming with Confluent Cloud.
 In this setup, a data engineer can extract the required features from various sources into separate topics. These topics enable data scientists to leverage the curated feature sets to develop and train machine learning models outside of the Confluent Cloud environment.
 This illustrates the power of integrating Confluent Cloud for efficient data streaming and feature engineering in the ML workflow.
+
+4. We shall see some fraudulent transactions under ***fraudulent_transactions*** topic by running the following command in flink
+```sql
+SELECT details FROM fraudulent_transactions
+```
+<div align="center" padding=25px>
+    <img src="images/fraud_transactions.png" width=75% height=75%>
+</div>
 
 ## <a name="step-12"></a>Connect Flink with Bedrock Model
 The next step is to create a integrated model from AWS Bedrock with Flink on Confluent Cloud.
@@ -571,10 +571,38 @@ confluent kafka cluster list
 confluent kafka cluster use <cluster-id>
 ```
 
+> **Note:** If you doesn't have any user you could check the step below to create user with full access to Bedrock and creating API key and secret. You could skip this step if you already have user and api key with full access to bedrock.
+
+>Go to **AWS IAM>User** and create User
+<div align="center">
+    <img src="images/bedrock0-1.png" width=100% height=100%>
+</div>
+
+>Create User with attach policies for Bedrock Full Access
+<div align="center">
+    <img src="images/bedrock0-2.png" width=100% height=100%>
+</div>
+
+<div align="center">
+    <img src="images/bedrock0-3.png" width=100% height=100%>
+</div>
+
+>Create API Key by search your user that has been created and click on the "Create Access Key"
+<div align="center">
+    <img src="images/bedrock0-4.png" width=100% height=100%>
+</div>
+
+<div align="center">
+    <img src="images/bedrock-1.png" width=100% height=100%>
+</div>
+
+<div align="center">
+    <img src="images/bedrock-2.png" width=100% height=100%>
+</div>
+
 ```bash
 confluent flink connection create my-connection --cloud aws --region us-east-1 --type bedrock --endpoint https://bedrock-runtime.us-east-1.amazonaws.com/model/meta.llama3-8b-instruct-v1:0/invoke --aws-access-key <API Key> --aws-secret-key <API Secret>
 ```
-
 3. After creating connection, we need to create the model in Flink before we could invoke on our query.
 ```sql
 CREATE MODEL NotificationEngine
@@ -592,7 +620,9 @@ WITH (
 ```sql
 SELECT message FROM fraudulent_transactions, LATERAL TABLE(ML_PREDICT('NotificationEngine', details));
 ```
-
+<div align="center" padding=25px>
+    <img src="images/ai_messages.png" width=75% height=75%>
+</div>
 ***
 
 ## <a name="step-13"></a>Flink Monitoring
@@ -621,16 +651,20 @@ Deleting the resources you created during this workshop will prevent you from in
     <img src="images/flink-delete-compute-pool.png" width=50% height=50%>
 </div>
 
-2. Next, delete the Datagen Source connectors for **shoe_orders**, **shoe_products** and **shoe_customers**. Navigate to the **Connectors** tab and select each connector. In the settings tab, you will see a **trash** icon on the bottom of the page. Click the icon and enter the **Connector Name**.
+2. Next, delete the Datagen Source connectors for **credit_cards_connector**, **customers_connector**. Navigate to the **Connectors** tab and select each connector. In the settings tab, you will see a **trash** icon on the bottom of the page. Click the icon and enter the **Connector Name**.
 <div align="center">
     <img src="images/delete-connector.png" width=75% height=75%>
 </div>
 
-3. Finally, under **Cluster Settings**, select the **Delete Cluster** button at the bottom. Enter the **Cluster Name** and select **Confirm**. 
+3. Next, under **Cluster Settings**, select the **Delete Cluster** button at the bottom. Enter the **Cluster Name** and select **Confirm**. 
 <div align="center">
     <img src="images/delete-cluster.png" width=50% height=50%>
 </div>
 
+4. Finally, to remove all resource pertaining to this workshop, delete the environment **workshop**.
+<div align="center">
+    <img src="images/delete-environment.png" width=50% height=50%>
+</div>
 *** 
 
 ## <a name="step-15"></a>Confluent Resources and Further Testing
