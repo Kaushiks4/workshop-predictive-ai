@@ -159,7 +159,7 @@ def run_fraud_detection(producer,consumer, json_deserializer_value, json_deseria
                         transactions_count=transaction_count,
                         timestamp=time_range
                     )
-                    print(f"Fraud detected for transaction for credit card: {key.credit_card_number} {feature}")
+                    print(f"Fraud detected for transaction for credit card: {key.credit_card_number} {feature.customer_email}")
                 consumer.commit()
     except KeyboardInterrupt:
         pass
